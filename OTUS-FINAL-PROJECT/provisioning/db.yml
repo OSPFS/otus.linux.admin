@@ -1,0 +1,67 @@
+- hosts: db1
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.14'    
+    ipv4_gw: '10.10.10.1'
+    
+  
+  roles: 
+    - NetConfig
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+    - Patroni
+
+
+- hosts: dbproxy
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.13'    
+    ipv4_gw: '10.10.10.1'    
+  
+  roles: 
+    - NetConfig
+    - Consul
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+    - Haproxy
+    - InstallDB
+
+- hosts: db2
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.15'    
+    ipv4_gw: '10.10.10.1'    
+  
+  roles: 
+    - NetConfig
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+    - Patroni
+
+- hosts: db3
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.16'    
+    ipv4_gw: '10.10.10.1'    
+  
+  roles: 
+    - NetConfig
+    -  role: dj-wasabi.zabbix-agent
+       zabbix_agent_server: 10.10.10.17
+       zabbix_agent_serveractive: 10.10.10.17
+       zabbix_create_host: present
+       zabbix_agent_allowroot: 1
+       zabbix_selinux: true
+    - Patroni

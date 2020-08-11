@@ -1,0 +1,35 @@
+---
+
+- hosts: webapp1
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.11'
+    ipv4_gw: '10.10.10.1'    
+  
+  roles:
+    - NetConfig
+    - WebApp
+    - Bckp
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+
+- hosts: webapp2
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.12'
+    ipv4_gw: '10.10.10.1'
+      
+  roles: 
+    - NetConfig
+    - WebApp
+    - Bckp
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true

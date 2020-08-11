@@ -1,0 +1,56 @@
+---
+# tasks file for init
+
+# - name: Disable yum fastestmirror plugin
+#   lineinfile:
+#     path: /etc/yum/pluginconf.d/fastestmirror.conf
+#     regexp: '^enabled=1'
+#     line: enabled=0
+
+- sysctl:
+      name: vm.swappiness
+      value: '10'
+      sysctl_file: /etc/sysctl.d/10-vmswappines.conf
+      state: present
+      reload: yes
+
+- name: Epel-release
+  yum: name=epel-release state=present
+
+# - name: Update all packages
+#   yum: name=* state=present
+
+- name: Install stuff
+  yum: name={{ item }} state=present
+  loop:
+    - nano
+    - mc
+    - htop
+    - wget
+    - curl
+    - tree
+    - unzip
+
+- name: Setup mc 
+  unarchive:
+    src: mcfg.tar.gz
+    dest: /root
+
+- name: Install pip
+  yum: name={{ item }} state=present
+  loop: 
+    - python2-pip
+    - python3-pip
+
+- name: Put SELinux in permissive mode, logging actions that would be blocked.
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: Update configuration block in /etc/ssh/ssh_config
+  blockinfile:
+    path: /etc/ssh/ssh_config
+    block: |
+      Host 10.10.10.*
+        StrictHostKeyChecking no
+        UserKnownHostsFile=/dev/null

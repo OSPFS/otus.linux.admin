@@ -1,0 +1,22 @@
+---
+- name: Patroni | common | Install required packages
+  yum:
+    name:
+      - zip
+      - unzip
+      - git
+      - telnet
+      - psmisc
+    state: present
+
+- name: Put SELinux in permissive mode, logging actions that would be blocked.
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: Patroni | common | Turn off Firewalld
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: False
+

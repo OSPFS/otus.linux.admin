@@ -1,0 +1,20 @@
+! Configuration File for keepalived
+
+global_defs {
+     router_id {{ ipv4_eth2 }}
+}
+
+vrrp_instance VI_1 {
+    state {{ vrrp_state }}
+    interface eth2
+    virtual_router_id 51
+    priority {{ vrrp_prio }} #used in election, 101 for master & 100 for backup
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass P0S@word
+    }
+    virtual_ipaddress {
+        10.10.10.1/24
+    }
+}

@@ -1,0 +1,34 @@
+---
+# tasks file for ELK
+
+    - name: Enable ELK repo
+      copy: 
+        src: elk.repo
+        dest: /etc/yum.repos.d/elasticsearch.repo
+    
+    - shell: rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+    - name: Install ELK
+      yum: name={{ item }} state=present
+      loop:
+        - java-11-openjdk-devel
+        - elasticsearch
+        - kibana
+    
+    - name: Copy Kibana config
+      copy: src=kibana.yml dest=/etc/kibana/kibana.yml
+
+    - name: Copy Elastic config
+      copy: src=elasticsearch.yml dest=/etc/elasticsearch/elasticsearch.yml
+    
+    - name: Start Elastic
+      service: 
+        name: elasticsearch
+        enabled: yes
+        state: started
+
+    - name: Start Kibana
+      service: 
+        name: kibana
+        enabled: yes
+        state: started

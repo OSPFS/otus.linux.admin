@@ -1,0 +1,66 @@
+---
+# user: Admin
+# pass: xn3d9EMvEa6bVMh
+
+- hosts: zabbix
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.17'    
+    ipv4_gw: '10.10.10.1'
+    
+  
+  roles: 
+    - NetConfig
+    - { role: dj-wasabi.zabbix-server, 
+              zabbix_server_name: zabbix,
+              zabbix_selinux: true,
+              zabbix_server_database: pgsql,
+              zabbix_server_database_long: postgresql,
+              zabbix_server_dbhost: 10.10.10.13,
+              zabbix_server_dbname: zabbix,
+              zabbix_server_dbuser: zabbix,
+              zabbix_server_dbpassword: LoG0peD,
+              zabbix_database_creation: false }
+    - { role: dj-wasabi.zabbix-web,                
+              zabbix_server_database: pgsql,
+              zabbix_server_database_long: postgresql,
+              zabbix_server_dbhost: 10.10.10.13,
+              zabbix_server_dbname: zabbix,
+              zabbix_server_dbuser: zabbix,
+              zabbix_server_dbpassword: LoG0peD,
+              zabbix_timezone: Europe/Moscow,
+              zabbix_vhost: false }
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: '127.0.0.1, 10.10.10.17'
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+      zabbix_host_groups: 
+                     - Linux Servers
+      zabbix_link_templates:
+                     - Template OS Linux by Zabbix agent
+                     - Template App Apache by Zabbix agent
+                     - Template App Zabbix Server
+
+  tasks:  
+  - name: Copy TZ info
+    shell: echo 'date.timezone = "Europe/Moscow"' > /etc/php.d/datetime.ini
+  
+
+  - name: Put SELinux in permissive mode, logging actions that would be blocked.
+    selinux:
+      policy: targeted
+      state: permissive
+
+  - name: Restart services
+    service:
+      name: httpd
+      state: restarted
+
+  - name: Restart services
+    service:
+      name: zabbix-server
+      state: restarted
+
+

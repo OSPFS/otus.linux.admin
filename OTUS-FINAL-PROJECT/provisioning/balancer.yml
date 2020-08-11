@@ -1,0 +1,38 @@
+
+- hosts: balancer1
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.8'
+    ipv4_gw: '10.10.10.1'
+    vrrp_state: 'MASTER'
+    vrrp_prio: '101'
+      
+  roles: 
+    - NetConfig
+    - balancer
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+
+- hosts: balancer2
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.9'
+    ipv4_gw: '10.10.10.1'
+    vrrp_state: 'BACKUP'
+    vrrp_prio: '100'
+      
+  roles: 
+    - NetConfig
+    - balancer
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+
+  

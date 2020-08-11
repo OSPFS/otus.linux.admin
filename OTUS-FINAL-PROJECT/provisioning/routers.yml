@@ -1,0 +1,54 @@
+- hosts: isp
+  become: yes
+  vars:
+    ipv4_eth1: '10.0.1.201'
+    ipv4_eth2: '10.10.1.1'
+    ipv4_gw: '10.0.1.2'
+    
+  roles:
+    - NetConfig
+    - router
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+    
+- hosts: router1
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.1.2'
+    ipv4_eth2: '10.10.10.2'    
+    ipv4_gw: '10.10.1.1'    
+    vrrp_state: 'MASTER'
+    vrrp_prio: '101'
+
+  roles:
+    - NetConfig
+    - router
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+
+- hosts: router2
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.1.3'
+    ipv4_eth2: '10.10.10.3'
+    ipv4_gw: '10.10.1.1'
+    vrrp_state: 'BACKUP'
+    vrrp_prio: '100'
+  
+  roles:
+    - NetConfig
+    - router
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true

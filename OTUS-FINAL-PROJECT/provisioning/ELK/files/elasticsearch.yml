@@ -1,0 +1,4 @@
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+network.host: 10.10.10.18
+cluster.initial_master_nodes: 10.10.10.18

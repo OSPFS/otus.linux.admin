@@ -1,0 +1,115 @@
+- hosts: bckp
+  become: yes
+  vars:
+    ipv4_eth1: '10.10.10.19'    
+    ipv4_gw: '10.10.10.1'    
+  
+  roles: 
+    - NetConfig
+    - role: dj-wasabi.zabbix-agent
+      zabbix_agent_server: 10.10.10.17
+      zabbix_agent_serveractive: 10.10.10.17
+      zabbix_create_host: present
+      zabbix_agent_allowroot: 1
+      zabbix_selinux: true
+
+  tasks:
+  - name: Install Postgre REPO
+    yum:
+      name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+      state: present  
+
+  - name: Install Backup Soft
+    yum: name={{ item }} state=present
+    loop:
+      - https://repo.postgrespro.ru/pg_probackup/keys/pg_probackup-repo-centos.noarch.rpm
+      - pg_probackup-11
+      - pg_probackup-11-debuginfo
+      - postgresql11
+      - borgbackup  
+
+  - name: Add user postgres
+    user: 
+      name: postgres
+      password: P@S$w0rD
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa  
+
+  - name: Add user borg
+    user: 
+      name: borg
+      password: borgpass
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+       
+  - name: Creates backup directory
+    file:
+      path: /srv/borg_backup
+      state: directory
+      owner: borg
+      group: borg
+      mode: 0770  
+
+  - name: Fetch ssh key
+    slurp:
+      src: /home/postgres/.ssh/id_rsa.pub
+    register: idrsa  
+
+  - name: Put ssh key to db1
+    authorized_key:
+      user: postgres
+      state: present
+      key: "{{ idrsa['content'] | b64decode }}"
+    delegate_to: db1  
+
+  - name: Put ssh key to db2
+    authorized_key:
+      user: postgres
+      state: present
+      key: "{{ idrsa['content'] | b64decode }}"
+    delegate_to: db2
+
+  - name: Put ssh key to db3
+    authorized_key:
+      user: postgres
+      state: present
+      key: "{{ idrsa['content'] | b64decode }}"
+    delegate_to: db3 
+
+  - name: Creates backup directory
+    file:
+      path: /srv/db_backup
+      state: directory
+      owner: postgres
+      group: postgres
+      mode: 0770  
+
+  - name: Create .pgpass
+    lineinfile:
+      path: /home/postgres/.pgpass
+      line: '*:*:*:*:P@ssw0rd'
+      owner: postgres
+      group: postgres
+      mode: '0600'
+      create: yes  
+
+  - name: Add ssh host-key
+    become: yes
+    become_user: postgres
+    command: ssh -o "StrictHostKeyChecking=no" 10.10.10.14 echo
+
+  - name: Whois master?
+    become: yes
+    become_user: postgres
+    shell: ssh -o "StrictHostKeyChecking=no" 10.10.10.14 patronictl -c /etc/patroni/patroni.yml list|grep Leader| awk '{print $4}'
+    register: master_srv
+
+  - name: Make DB Backup
+    become_user: postgres
+    shell: |
+      pg_probackup-11 init -B /srv/db_backup/
+      pg_probackup-11 add-instance -B /srv/db_backup/ --instance 'otus' --remote-host={{ master_srv.stdout }} --remote-user=postgres -D /var/data/base
+      pg_probackup-11 backup -B /srv/db_backup/ --instance 'otus' -b FULL --stream --remote-host={{ master_srv.stdout }} --remote-user=postgres -D /var/data/base
+

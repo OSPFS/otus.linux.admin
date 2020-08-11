@@ -1,0 +1,28 @@
+---
+# tasks file for NetConfig
+
+- name: Disable Network Manager
+  service: name=NetworkManager enabled=no state=stopped
+  
+- name: Kill dhclient
+  shell: if pkill dhclient; then echo 1; else echo 0; fi
+  
+- name: Configure network IPV6FORWARDING
+  copy: src=network dest=/etc/sysconfig/network
+  when: (ansible_facts['hostname'] == "isp") or (ansible_facts['hostname'] == "router1") or (ansible_facts['hostname'] == "router2")
+
+- name: Configure network interface eth0
+  copy: src=ifcfg-eth0 dest=/etc/sysconfig/network-scripts/ifcfg-eth0
+
+- name: Configure network interface eth1
+  template: src=ifcfg-eth1.j2 dest=/etc/sysconfig/network-scripts/ifcfg-eth1
+
+- name: Configure network interface eth2
+  template: src=ifcfg-eth2.j2 dest=/etc/sysconfig/network-scripts/ifcfg-eth2
+  when: ipv4_eth2 is defined
+
+- name: Restart network
+  service: name=network state=restarted
+  
+- name: RE-Gather facts
+  setup:

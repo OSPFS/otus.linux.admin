@@ -1,0 +1,45 @@
+---
+# tasks file for Bckp
+
+- name: Install Borgbackup
+  yum: name=borgbackup state=present
+
+- name: Add ssh-key to user root
+  user: 
+    name: root    
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: .ssh/id_rsa
+
+- name: Fetch ssh key
+  slurp:
+    src: /root/.ssh/id_rsa.pub
+  register: idrsa
+
+- name: Put ssh key to Backup Server
+  authorized_key:
+    user: borg
+    state: present
+    key: "{{ idrsa['content'] | b64decode }}"
+  delegate_to: bckp
+
+- name: Put backup script
+  template: src=bbackup.j2 dest=/usr/local/bin/bbackup.sh mode=0777
+
+- name: Add Crontab backup task
+  blockinfile:
+    path: /etc/cron.d/bbackup
+    create: yes
+    block: |
+      SHELL=/bin/bash
+      PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+      MAILTO=root
+      01 * * * * root bbackup.sh
+    owner: root
+    group: root
+    mode: '0644'
+
+- block:
+   - name: Init Borg Backup
+     shell: borg init -e=none ssh://borg@10.10.10.19/srv/borg_backup/{{ ansible_hostname }} && /usr/local/bin/bbackup.sh
+  ignore_errors: yes
