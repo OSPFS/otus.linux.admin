@@ -1,0 +1,17 @@
+!
+! Zebra configuration saved from vty
+!   2020/04/14 09:02:18
+!
+!
+hostname {{ ansible_hostname }}
+!
+!
+!
+router bgp 65500
+ bgp router-id {{ ipv4_eth1 }}
+ redistribute connected
+ neighbor 10.10.1.1 remote-as 65000
+!
+!
+line vty
+!

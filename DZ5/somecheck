@@ -1,0 +1,3 @@
+WORD="error"
+LOG=/var/log/some.log
+

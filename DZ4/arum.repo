@@ -1,0 +1,8 @@
+#ARum.repo
+
+[arum]
+name=ARum
+baseurl=https://yum.rumyantsev.com/centos/7/x86_64/
+gpgcheck=0
+enabled=1
+

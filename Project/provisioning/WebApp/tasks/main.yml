@@ -1,0 +1,88 @@
+---
+# tasks file for WebApp
+- name: Install Nginx, yum-utils
+  yum: name={{ item }} state=present
+  loop:
+    - nginx
+    - yum-utils
+    - php-mbstring
+    - policycoreutils-python
+
+- name: Change the httpd_t domain to permissive
+  selinux_permissive:
+    name: httpd_t
+    permissive: true
+
+- name: Nginx config
+  copy: src=nginx.conf dest=/etc/nginx/nginx.conf mode=0644
+
+- name: Copy default config
+  copy: src=default.conf dest=/etc/nginx/conf.d/default.conf
+
+- name: Site config
+  copy: src=cms.zzz.chat.conf dest=/etc/nginx/conf.d/cms.zzz.chat.conf
+
+- name: Install remi repo
+  yum: name=http://rpms.remirepo.net/enterprise/remi-release-7.rpm state=present
+
+- name: Enable PHP73 Repo
+  command: yum-config-manager --enable remi-php73
+
+- name: Install PHP stuff
+  yum: name={{ item }} state=present
+  loop:
+    - php-fpm
+    - php-cli
+    - php-gd
+    - php-opcache
+    - php-mysqlnd
+    - php-json
+    - php-mcrypt
+    - php-xml
+    - php-curl
+    - php73-php-pgsql
+
+- name: Cnfigure PDO
+  copy: src=20-postgres.ini dest=/etc/php.d/20-postgres.ini
+
+- name: Configure PHP-FPM
+  shell: sed -i 's/user \= apache/user \= nginx/g' /etc/php-fpm.d/www.conf && 
+           sed -i 's/group \= apache/group \= nginx/g' /etc/php-fpm.d/www.conf && 
+           chown -R root:nginx /var/lib/php/*
+
+- name: Extract website content
+  unarchive:
+    src: www.tgz
+    dest: /opt
+
+- name: Start Nginx
+  service: 
+    name: nginx 
+    enabled: yes
+    state: restarted
+
+- name: Start PHP-FPM
+  service: 
+    name: php-fpm 
+    enabled: yes
+    state: restarted
+
+- name: Install Filebeat
+  yum:
+    name: https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-7.6.2-x86_64.rpm
+    state: present
+
+- name: Copy filebeat config
+  copy: src=filebeat.yml dest=/etc/filebeat/filebeat.yml
+
+- block:
+  - name: Enabe nginx config in filebeat
+    command: mv /etc/filebeat/modules.d/nginx.yml.disabled /etc/filebeat/modules.d/nginx.yml
+  ignore_errors: yes
+
+- name: Enable Filebeat
+  service:
+    name: filebeat
+    enabled: yes
+    state: started
+    

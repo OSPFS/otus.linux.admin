@@ -1,0 +1,7 @@
+---
+# handlers file for router
+  
+- name: Restart network
+  service: name=network state=restarted
+  
+

@@ -1,0 +1,80 @@
+home = ENV['HOME']
+
+MACHINES = {
+  :server => {
+        :box_name => "centos/7",
+        :cpus => 2,
+        :ip_addr => '192.168.11.150',
+  },
+  :client => {
+        :box_name => "centos/7",
+        :cpus => 2,
+        :ip_addr => '192.168.11.151',
+  }
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+      config.vm.define boxname do |box|
+
+          box.vm.box = boxconfig[:box_name]
+          box.vm.host_name = boxname.to_s
+          #box.vm.network "forwarded_port", guest: 3260, host: 3260+offset
+          box.vm.network "private_network", ip: boxconfig[:ip_addr]
+
+          box.vm.provider :virtualbox do |vb|
+          vb.cpus = boxconfig[:cpus]
+          vb.customize ["modifyvm", :id, "--memory", "1560"]
+        #   vb.customize ["storagectl", :id, "--name", "SATA", "--add", "sata" ]
+          vb.name = boxname.to_s
+
+        #   boxconfig[:disks].each do |dname, dconf|
+        #       unless File.exist?(dconf[:dfile])
+        #         vb.customize ['createhd', '--filename', dconf[:dfile], '--variant', 'Fixed', '--size', dconf[:size]]
+        #       end
+        #       vb.customize ['storageattach', :id,  '--storagectl', 'SATA', '--port', dconf[:port], '--device', 0, '--type', 'hdd', '--medium', dconf[:dfile]]
+        # end
+          end
+#      box.vm.provision "shell", inline: <<-SHELL
+#          mkdir -p ~root/.ssh
+#          cp ~vagrant/.ssh/auth* ~root/.ssh
+#      SHELL
+
+      case boxname.to_s
+      when "server"
+        box.vm.provision "shell", inline: <<-SHELL
+          setenforce 0
+          sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+          sed -i "s/nabled=1/nabled=0/g" /etc/yum/pluginconf.d/fastestmirror.conf
+          yum install epel-release -y
+          yum install nano wget mc borgbackup -y
+          adduser borg 
+          mkdir -p /home/borg/.ssh
+          cp /vagrant/authorized_keys /home/borg/.ssh/authorized_keys
+          chmod 600 /home/borg/.ssh/authorized_keys
+          chown borg:borg /home/borg/.ssh
+          chown borg:borg /home/borg/.ssh/authorized_keys 
+         SHELL
+      when "client"
+        box.vm.provision "shell", inline: <<-SHELL
+         setenforce 0
+         sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+         sed -i "s/nabled=1/nabled=0/g" /etc/yum/pluginconf.d/fastestmirror.conf
+         yum install -y epel-release
+         yum install -y nano wget borgbackup mc
+         mkdir -p /root/.ssh
+         cp /vagrant/id_rs* /root/.ssh/
+         cp /vagrant/config /root/.ssh/
+         cp /vagrant/bb.sh /root/
+         cp /vagrant/bb.cron /etc/cron.d/
+         borg init -e=none borg@192.168.11.150:/home/borg/client
+         /root/bb.sh
+        SHELL
+
+      end
+
+      end
+   end
+end

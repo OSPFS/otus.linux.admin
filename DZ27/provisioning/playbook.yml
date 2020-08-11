@@ -1,0 +1,14 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+  - name: install packages
+    yum: name={{ item }} state=latest 
+    loop:
+      - epel-release
+      - nginx
+      - mc
+      - nano
+
+#  - name: copy transferkey to all servers and the client
+#    copy: src=named.zonetransfer.key dest=/etc/named.zonetransfer.key owner=root group=named mode=0644

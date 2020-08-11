@@ -1,0 +1,81 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+  - name: install packages
+    yum: name={{ item }} state=latest 
+    loop:
+      - epel-release
+      - mc
+      - nano
+      - tcpdump
+      - openvpn
+      - iperf3
+
+  - sysctl:
+      name: net.ipv4.ip_forward
+      value: '1'
+      sysctl_set: yes
+      state: present
+      reload: yes
+
+  - sysctl:
+      name: net.ipv4.conf.all.rp_filter
+      value: '2'
+      sysctl_set: yes
+      state: present
+      reload: yes
+
+  - selinux:
+      state: disabled
+
+  - name: Copy bash_profile
+    copy: src=.bash_profile dest=/home/vagrant/.bash_profile owner=vagrant group=vagrant mode=0666
+
+
+- hosts: server1
+  become: yes
+  tasks:
+  - name: Copy static key
+    copy: src=static.key dest=/etc/openvpn/static.key owner=root group=root mode=0600
+
+  - name: Copy server.conf
+    copy: src=etc.tar dest=/etc/openvpn/ owner=root group=root mode=0666
+
+  - name: Mkconfig
+    unarchive:
+      src: etc.tar
+      dest: /etc/openvpn/
+
+  - name: Start openvpn service
+    service:
+     name: openvpn@server
+     state: started
+     enabled: yes
+
+  - name: Start openvpn service
+    service:
+     name: openvpn@ras
+     state: started
+     enabled: yes
+
+- hosts: server2
+  become: yes
+  tasks:
+  - name: Copy static key
+    copy: src=static.key dest=/etc/openvpn/static.key owner=root group=root mode=0600
+
+  - name: Copy server.conf
+    copy: src=openvpn_server2.conf dest=/etc/openvpn/server.conf owner=root group=root mode=0666
+
+  - name: Start openvpn service
+    service:
+     name: openvpn@server
+     state: started
+     enabled: yes
+
+- hosts: client1
+  become: yes
+  tasks:
+  - name: Copy OVPN confoig
+    copy: src=client.conf dest=/etc/openvpn/client.conf owner=root group=root mode=0666

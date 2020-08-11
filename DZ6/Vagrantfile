@@ -1,0 +1,60 @@
+MACHINES = {
+  :"DZ6" => {
+              # VM box
+              :box_name => "centos/7",
+              # VM CPU count
+              :cpus => 2,
+              # VM RAM size (Mb)
+              :memory => 1024,
+              # networks
+              :net => [],
+              # forwarded ports
+              :forwarded_port => []
+            }
+}
+
+Vagrant.configure("2") do |config|
+  MACHINES.each do |boxname, boxconfig|
+    # Disable shared folders
+    #config.vm.synced_folder ".", "/vagrant", disabled: true
+    # Apply VM config
+    config.vm.define boxname do |box|
+      # Set VM base box and hostname
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+      # Additional network config if present
+      if boxconfig.key?(:net)
+        boxconfig[:net].each do |ipconf|
+          box.vm.network "private_network", ipconf
+        end
+      end
+      # Port-forward config if present
+      if boxconfig.key?(:forwarded_port)
+        boxconfig[:forwarded_port].each do |port|
+          box.vm.network "forwarded_port", port
+        end
+      end
+      # VM resources config
+      box.vm.provider "virtualbox" do |v|
+        # Set VM RAM size and CPU count
+        v.memory = boxconfig[:memory]
+        v.cpus = boxconfig[:cpus]
+      end
+      box.vm.provision "shell", inline: <<-SHELL
+              mkdir -p ~root/.ssh
+              cp ~vagrant/.ssh/auth* ~root/.ssh
+              yum install mailx -y
+              mkdir /opt/LogCHK
+              cd /vagrant
+              cp access* *.sh /opt/LogCHK
+              ln -s /opt/LogCHK/logchk.sh /etc/cron.hourly/logchk.sh
+              echo "Start tests..."
+              /opt/LogCHK/tst.sh
+              echo
+              echo "Check E-Mail !!!"
+              echo "mail -u root"
+              echo
+      SHELL
+    end
+  end
+end

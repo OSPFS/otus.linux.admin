@@ -1,0 +1,69 @@
+MACHINES = {
+  :"DZ5" => {
+              # VM box
+              :box_name => "centos/7",
+              # VM CPU count
+              :cpus => 2,
+              # VM RAM size (Mb)
+              :memory => 1024,
+              # networks
+              :net => [],
+              # forwarded ports
+              :forwarded_port => []
+            }
+}
+
+Vagrant.configure("2") do |config|
+  MACHINES.each do |boxname, boxconfig|
+    # Disable shared folders
+    #config.vm.synced_folder ".", "/vagrant", disabled: true
+    # Apply VM config
+    config.vm.define boxname do |box|
+      # Set VM base box and hostname
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+      # Additional network config if present
+      if boxconfig.key?(:net)
+        boxconfig[:net].each do |ipconf|
+          box.vm.network "private_network", ipconf
+        end
+      end
+      # Port-forward config if present
+      if boxconfig.key?(:forwarded_port)
+        boxconfig[:forwarded_port].each do |port|
+          box.vm.network "forwarded_port", port
+        end
+      end
+      # VM resources config
+      box.vm.provider "virtualbox" do |v|
+        # Set VM RAM size and CPU count
+        v.memory = boxconfig[:memory]
+        v.cpus = boxconfig[:cpus]
+      end
+      box.vm.provision "shell", inline: <<-SHELL
+              mkdir -p ~root/.ssh
+              cp ~vagrant/.ssh/auth* ~root/.ssh
+              yum install -y epel-release -y && yum install spawn-fcgi php php-cli mod_fcgid httpd wget fontconfig expect -y
+              cp /vagrant/*.service /vagrant/*.timer /etc/systemd/system/
+              cp /vagrant/httpd*.conf /etc/httpd/conf/
+              cd /vagrant/
+              cp httpd-one httpd-two somecheck spawn-fcgi /etc/sysconfig
+              cp somecheck.sh /usr/local/bin
+              echo "error" > /var/log/some.log
+              echo "Getting Atlassian Jira, please wait..."
+              wget -nv https://www.atlassian.com/software/jira/downloads/binary/atlassian-jira-software-8.5.1-x64.bin >/dev/null
+              chmod +x atlassian-jira-software-8.5.1-x64.bin
+	      /vagrant/jirasetup.sh
+	      rm -f /etc/rc.d/init.d/jira /etc/rc.d/init.d/spawn-fcgi
+	      setenforce 0
+              systemctl start httpd@one.service
+              systemctl start httpd@two.service
+              systemctl start spawn-fcgi.service
+              systemctl start somecheck.timer
+              sleep 60
+              chown -R jira:jira /opt/atlassian || sleep 30 && chown -R jira:jira /opt/atlassian
+              systemctl start jira.service
+          SHELL
+    end
+  end
+end

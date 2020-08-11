@@ -1,0 +1,82 @@
+---
+# tasks file for Database
+
+- name: Install Postgre REPO
+  yum:
+    name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    state: present
+
+- name: Install PostgreSQL
+  yum: name={{ item }} state=present
+  loop:
+    - postgresql11
+
+- name: Install pip
+  pip: name={{ item }} state=present
+  loop:
+    # - psycopg2
+    - psycopg2-binary
+
+- name: Create a new database with name "cmsdb"  
+  postgresql_db:
+    login_host: "{{ ipv4_eth1 }}"
+    login_user: postgres
+    login_password: P@ssw0rd
+    name: cmsdb
+    state: present
+    encoding: UTF-8
+
+- name: Create cmsdb DB User
+  postgresql_user:
+    login_host: "{{ ipv4_eth1 }}"
+    login_user: postgres
+    login_password: P@ssw0rd
+    db: cmsdb
+    name: cmska
+    password: LoG0peD
+    state: present
+    priv: CONNECT
+
+- name: Create a new database with name "zabbix"
+  postgresql_db:
+    login_host: "{{ ipv4_eth1 }}"
+    login_user: postgres
+    login_password: P@ssw0rd
+    name: zabbix
+    state: present
+    encoding: UTF-8
+
+- name: Create zabbix DB User
+  postgresql_user:
+    login_host: "{{ ipv4_eth1 }}"
+    login_user: postgres
+    login_password: P@ssw0rd  
+    db: zabbix
+    name: zabbix
+    password: LoG0peD
+    state: present
+    priv: CONNECT
+
+- name: Copy database
+  copy: src=cmsdb.gz dest=/tmp
+      
+- name: Copy database
+  copy: src=zabbix.gz dest=/tmp
+      
+- name: Restore database "cmsdb"
+  postgresql_db:
+    login_host: "{{ ipv4_eth1 }}"
+    login_user: postgres
+    login_password: P@ssw0rd  
+    name: cmsdb
+    target: /tmp/cmsdb.gz
+    state: restore
+
+- name: Restore database "zabbix"  
+  postgresql_db:
+    login_host: "{{ ipv4_eth1 }}"
+    login_user: postgres
+    login_password: P@ssw0rd  
+    name: zabbix
+    target: /tmp/zabbix.gz
+    state: restore

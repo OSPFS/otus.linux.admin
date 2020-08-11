@@ -1,0 +1,36 @@
+---
+- name: Patroni | install | Install patroni requiered packages
+  yum:
+    name: "{{ yum_packages }}"
+    update_cache: True
+    state: present
+
+- name: Install Postgre REPO
+  yum:
+    name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    state: present
+
+- name: Install PostgreSQL
+  yum: name={{ item }} state=present
+  loop:
+    - postgresql11
+    - postgresql11-server
+    - postgresql11-contrib 
+
+- name: Patroni | install | Install pip packages
+  pip:
+    name: "{{ pip_packages }}"
+    state: present    
+  tags:
+    - pip
+
+- name: Update stuptools
+  command: pip install --upgrade setuptools
+
+- name: Patroni | install | Install patroni
+  pip:
+    name: patroni
+    state: present
+    executable: pip
+  tags:
+    - pip-patroni

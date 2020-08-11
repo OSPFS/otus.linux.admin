@@ -1,0 +1,16 @@
+---
+
+- name: Install pg_probackup
+  yum: name={{ item }} state=present
+  loop:
+    - https://repo.postgrespro.ru/pg_probackup/keys/pg_probackup-repo-centos.noarch.rpm
+    - pg_probackup-11
+    - pg_probackup-11-debuginfo
+    - borgbackup
+
+- name: Set password and Generate SSH key for user postgres
+  user:
+    name: postgres
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: .ssh/id_rsa

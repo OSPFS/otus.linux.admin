@@ -1,0 +1,74 @@
+---
+# tasks file for router
+- sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- sysctl:
+    name: net.ipv4.ip_nonlocal_bind
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- sysctl:
+    name: net.ipv4.conf.default.rp_filter
+    value: 2
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Install Quagga and tcpdump
+  yum: name={{ item }} state=present
+  loop:
+    - tcpdump
+    - quagga
+    
+- name: Configure SELINUX for quagga
+  command: setsebool -P zebra_write_config 1
+
+- name: Configure BGP for isp
+  copy: src=bgpd.isp dest=/etc/quagga/bgpd.conf mode=0600 owner=quagga
+  when: (ansible_facts['hostname'] == "isp")
+
+- name: Configure BGP for routers
+  template: src=bgpd.j2 dest=/etc/quagga/bgpd.conf mode=0600 owner=quagga
+  when: (ansible_facts['hostname'] != "isp")
+
+- name: Enable Zebra
+  service:
+    name: zebra
+    enabled: yes
+    state: restarted
+
+- name: Enable BGPd
+  service:
+    name: bgpd
+    enabled: yes
+    state: restarted
+
+- name: Install and configure VRRP
+  block:
+    - name: Install keepkeepalived
+      yum: name=keepalived state=present
+    
+    - name: Configure keepalived for routers
+      template: src=keepalived.j2 dest=/etc/keepalived/keepalived.conf mode=0666 owner=root
+    
+    - name: Enable VRRP
+      service:
+        name: keepalived
+        enabled: yes
+        state: started  
+  when: (ansible_facts['hostname'] != "isp")
+    

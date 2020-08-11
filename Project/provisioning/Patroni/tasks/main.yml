@@ -1,0 +1,15 @@
+---
+#tasks file for roles/patroni
+  
+- name: Patroni | main | Include common tasks
+  include: common.yml
+
+- name: Patroni | main | Include install tasks
+  include: install.yml
+
+- name: Patroni | main | Configure and run patroni cluster
+  include: configure.yml
+  tags: configure
+
+- name: Install pg_probackup
+  include: pg_probackup.yml
